@@ -4,6 +4,8 @@ import _ from 'underscore';
 import sift from 'sift';
 import queue from 'async/queue';
 import DiffSequence from "./DiffSequence";
+const { setIntervalAsync } = require('set-interval-async/dynamic')
+const { clearIntervalAsync } = require('set-interval-async')
 import {EventEmitter} from 'events';
 
 function delayedPromise(timeout){
@@ -48,35 +50,37 @@ class ObserveCursor extends EventEmitter{
                 if(err)
                     return callback();//TODO error handle
                 let newAssoc = _.chain(results)
-                    .map((doc)=>{
-                        return EJSON.clone( doc.toObject({ getters: false }) );
-                    })
-                    .indexBy('id')
-                    .value();
+                .indexBy('id')
+                .mapObject((doc,id)=>{
+                    let rawDoc =  doc.toObject({ getters: false });
+                    rawDoc._id = id;
+                    return rawDoc;
+                })
+                .value();
 
                 if(this.handlers.removed) {
                     let removedIds = _.difference( _.keys(this.modelsMap), _.keys(newAssoc) );
-                    _.each(removedIds,(id)=>{
-                        this.handlers.removed.apply(this, [id,this.modelsMap[id]]);
+                    _.each(removedIds,(_id)=>{
+                        this.handlers.removed.apply(this, [_id,this.modelsMap[_id]]);
                     });
                 }
 
                 _.chain(newAssoc)
-                    .each((result)=>{
-                        let rawResult =  newAssoc[String(result.id)];
-                        let id = _.isString(result.id)?result.id:String(result.id);
-                        newAssoc[id] = rawResult;
-                        let oldModel = this.modelsMap[id];
-                        if(!oldModel&&this.handlers.added){
-                            this.handlers.added.apply(this, [result.id,result]);
+                .each((result)=>{
+                    let rawResult =  newAssoc[String(result._id)];
+                    let _id = _.isString(result._id)?result._id:String(result._id);
+                    newAssoc[_id] = rawResult;
+                    let oldModel = this.modelsMap[_id];
+                    if(!oldModel&&this.handlers.added){
+                        this.handlers.added.apply(this, [result._id,result]);
+                    }
+                    if( oldModel && this.handlers.changed && !EJSON.equals(oldModel, rawResult)){
+                        let changedFields = DiffSequence.makeChangedFields(rawResult, oldModel);
+                        if( !_.isEmpty(changedFields)  ){
+                            this.handlers.changed.apply(this, [result._id,changedFields,result]);
                         }
-                        if( oldModel && this.handlers.changed && !EJSON.equals(oldModel, rawResult)){
-                            let changedFields = DiffSequence.makeChangedFields(rawResult, oldModel);
-                            if( !_.isEmpty(changedFields)  ){
-                                this.handlers.changed.apply(this, [result.id,changedFields,result]);
-                            }
-                        }
-                    });
+                    }
+                });
 
                 this.modelsMap = newAssoc;
                 this.emit('refresh',Date.now()-started);

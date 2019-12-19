@@ -15,19 +15,19 @@ function observeLogs(){
         date:new Date()
     }).save().then((result)=>{
         const cursor = ObserveLogs
-            .find()
-            .tailable({ awaitdata : true })
-            .cursor();
+        .find()
+        .tailable({ awaitdata : true })
+        .cursor();
 
         cursor.on('data', (doc) => {
-            if(!listenStarted && String(result.id) == String(doc.id) ) {
+            if(!listenStarted && String(result._id) == String(doc._id) ) {
                 listenStarted = true;
                 emitter.emit('ready');
             }
             if(listenStarted){
                 emitter.emit(doc.collectionName, doc);
-                lastDocId = String(doc.id);
-            }else if(lastDocId && lastDocId == String(doc.id)){
+                lastDocId = String(doc._id);
+            }else if(lastDocId && lastDocId == String(doc._id)){
                 listenStarted = true;
                 emitter.emit('ready');
             }
