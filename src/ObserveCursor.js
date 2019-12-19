@@ -51,29 +51,29 @@ class ObserveCursor extends EventEmitter{
                     .map((doc)=>{
                         return EJSON.clone( doc.toObject({ getters: false }) );
                     })
-                    .indexBy('_id')
+                    .indexBy('id')
                     .value();
 
                 if(this.handlers.removed) {
                     let removedIds = _.difference( _.keys(this.modelsMap), _.keys(newAssoc) );
-                    _.each(removedIds,(_id)=>{
-                        this.handlers.removed.apply(this, [_id,this.modelsMap[_id]]);
+                    _.each(removedIds,(id)=>{
+                        this.handlers.removed.apply(this, [id,this.modelsMap[id]]);
                     });
                 }
 
                 _.chain(newAssoc)
                     .each((result)=>{
-                        let rawResult =  newAssoc[String(result._id)];
-                        let _id = _.isString(result._id)?result._id:String(result._id);
-                        newAssoc[_id] = rawResult;
-                        let oldModel = this.modelsMap[_id];
+                        let rawResult =  newAssoc[String(result.id)];
+                        let id = _.isString(result.id)?result.id:String(result.id);
+                        newAssoc[id] = rawResult;
+                        let oldModel = this.modelsMap[id];
                         if(!oldModel&&this.handlers.added){
-                            this.handlers.added.apply(this, [result._id,result]);
+                            this.handlers.added.apply(this, [result.id,result]);
                         }
                         if( oldModel && this.handlers.changed && !EJSON.equals(oldModel, rawResult)){
                             let changedFields = DiffSequence.makeChangedFields(rawResult, oldModel);
                             if( !_.isEmpty(changedFields)  ){
-                                this.handlers.changed.apply(this, [result._id,changedFields,result]);
+                                this.handlers.changed.apply(this, [result.id,changedFields,result]);
                             }
                         }
                     });

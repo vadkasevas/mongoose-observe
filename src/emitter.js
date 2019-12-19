@@ -20,14 +20,14 @@ function observeLogs(){
             .cursor();
 
         cursor.on('data', (doc) => {
-            if(!listenStarted && String(result._id) == String(doc._id) ) {
+            if(!listenStarted && String(result.id) == String(doc.id) ) {
                 listenStarted = true;
                 emitter.emit('ready');
             }
             if(listenStarted){
                 emitter.emit(doc.collectionName, doc);
-                lastDocId = String(doc._id);
-            }else if(lastDocId && lastDocId == String(doc._id)){
+                lastDocId = String(doc.id);
+            }else if(lastDocId && lastDocId == String(doc.id)){
                 listenStarted = true;
                 emitter.emit('ready');
             }

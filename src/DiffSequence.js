@@ -47,8 +47,8 @@ DiffSequence.diffQueryUnorderedChanges = function (oldResults, newResults,  obse
             }
         } else if (observer.added) {
             var fields = projectionFn(newDoc);
-            delete fields._id;
-            observer.added(newDoc._id, fields);
+            delete fields.id;
+            observer.added(newDoc.id, fields);
         }
     });
 
@@ -66,12 +66,12 @@ DiffSequence.diffQueryOrderedChanges = function (old_results, new_results, obser
 
     let new_presence_of_id = {};
     new_results.forEach(function (doc) {
-        new_presence_of_id[doc._id] = true;
+        new_presence_of_id[doc.id] = true;
     });
 
     let old_index_of_id = {};
     old_results.forEach(function (doc, i) {
-        old_index_of_id[doc._id] = i;
+        old_index_of_id[doc.id] = i;
     });
 
     // ALGORITHM:
@@ -121,12 +121,12 @@ DiffSequence.diffQueryOrderedChanges = function (old_results, new_results, obser
     var ptrs = new Array(N);
     // virtual sequence of old indices of new results
     var old_idx_seq = function(i_new) {
-        return old_index_of_id[new_results[i_new]._id];
+        return old_index_of_id[new_results[i_new].id];
     };
     // for each item in new_results, use it to extend a common subsequence
     // of length j <= max_seq_len
     for(var i=0; i<N; i++) {
-        if (old_index_of_id[new_results[i]._id] !== undefined) {
+        if (old_index_of_id[new_results[i].id] !== undefined) {
             var j = max_seq_len;
             // this inner loop would traditionally be a binary search,
             // but scanning backwards we will likely find a subseq to extend
@@ -160,43 +160,43 @@ DiffSequence.diffQueryOrderedChanges = function (old_results, new_results, obser
     unmoved.push(new_results.length);
 
     old_results.forEach(function (doc) {
-        if (!new_presence_of_id[doc._id])
-            observer.removed && observer.removed(doc._id);
+        if (!new_presence_of_id[doc.id])
+            observer.removed && observer.removed(doc.id);
     });
 
     // for each group of things in the new_results that is anchored by an unmoved
     // element, iterate through the things before it.
     var startOfGroup = 0;
     unmoved.forEach(function (endOfGroup) {
-        var groupId = new_results[endOfGroup] ? new_results[endOfGroup]._id : null;
+        var groupId = new_results[endOfGroup] ? new_results[endOfGroup].id : null;
         var oldDoc, newDoc, fields, projectedNew, projectedOld;
         for (var i = startOfGroup; i < endOfGroup; i++) {
             newDoc = new_results[i];
-            if (!hasOwn.call(old_index_of_id, newDoc._id)) {
+            if (!hasOwn.call(old_index_of_id, newDoc.id)) {
                 fields = projectionFn(newDoc);
-                delete fields._id;
-                observer.addedBefore && observer.addedBefore(newDoc._id, fields, groupId);
-                observer.added && observer.added(newDoc._id, fields);
+                delete fields.id;
+                observer.addedBefore && observer.addedBefore(newDoc.id, fields, groupId);
+                observer.added && observer.added(newDoc.id, fields);
             } else {
                 // moved
-                oldDoc = old_results[old_index_of_id[newDoc._id]];
+                oldDoc = old_results[old_index_of_id[newDoc.id]];
                 projectedNew = projectionFn(newDoc);
                 projectedOld = projectionFn(oldDoc);
                 fields = DiffSequence.makeChangedFields(projectedNew, projectedOld);
                 if (!isObjEmpty(fields)) {
-                    observer.changed && observer.changed(newDoc._id, fields);
+                    observer.changed && observer.changed(newDoc.id, fields);
                 }
-                observer.movedBefore && observer.movedBefore(newDoc._id, groupId);
+                observer.movedBefore && observer.movedBefore(newDoc.id, groupId);
             }
         }
         if (groupId) {
             newDoc = new_results[endOfGroup];
-            oldDoc = old_results[old_index_of_id[newDoc._id]];
+            oldDoc = old_results[old_index_of_id[newDoc.id]];
             projectedNew = projectionFn(newDoc);
             projectedOld = projectionFn(oldDoc);
             fields = DiffSequence.makeChangedFields(projectedNew, projectedOld);
             if (!isObjEmpty(fields)) {
-                observer.changed && observer.changed(newDoc._id, fields);
+                observer.changed && observer.changed(newDoc.id, fields);
             }
         }
         startOfGroup = endOfGroup+1;
