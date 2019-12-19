@@ -2,8 +2,13 @@ import ObserveLogs from "./ObserveLogs";
 import ObserveCursor from "./ObserveCursor";
 import {Query} from 'mongoose';
 import EJSON from 'ejson';
-import mongoose from 'mongoose';
+const mongoose = require('mongoose');
 import emitter from "./emitter";
+
+const moduleMongoose = require.cache[require.resolve('mongoose')]
+
+const bson = moduleMongoose.require('bson');
+const mongodb = moduleMongoose.require('mongodb');
 
 let isReady = false;
 emitter.on('ready',()=>{
@@ -21,8 +26,8 @@ async function waitReady(){
     });
 }
 
-const BsonObjectId = require('bson').ObjectID;
-const MongodbObjectId = require('mongodb').ObjectId;
+const BsonObjectId = bson.ObjectID;
+const MongodbObjectId = mongodb.ObjectId;
 
 Query.prototype.observeChanges = function(handlers,options){
     return new ObserveCursor(this,options).observeChanges(handlers);

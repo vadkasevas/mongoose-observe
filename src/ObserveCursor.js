@@ -4,8 +4,6 @@ import _ from 'underscore';
 import sift from 'sift';
 import queue from 'async/queue';
 import DiffSequence from "./DiffSequence";
-const { setIntervalAsync } = require('set-interval-async/dynamic')
-const { clearIntervalAsync } = require('set-interval-async')
 import {EventEmitter} from 'events';
 
 function delayedPromise(timeout){
