@@ -47,6 +47,9 @@ class ObserveCursor extends EventEmitter{
                 console.log('refresh query exec end');
                 if(err)
                     return callback();//TODO error handle
+                let assocModels = _.indexBy(results,'id');
+
+                /**@type object*/
                 let newAssoc = _.chain(results)
                 .indexBy('id')
                 .mapObject((doc,id)=>{
@@ -70,12 +73,12 @@ class ObserveCursor extends EventEmitter{
                     newAssoc[_id] = rawResult;
                     let oldModel = this.modelsMap[_id];
                     if(!oldModel&&this.handlers.added){
-                        this.handlers.added.apply(this, [result._id,result]);
+                        this.handlers.added.apply(this, [result._id,result,assocModels[_id]]);
                     }
                     if( oldModel && this.handlers.changed && !EJSON.equals(oldModel, rawResult)){
                         let changedFields = DiffSequence.makeChangedFields(rawResult, oldModel);
                         if( !_.isEmpty(changedFields)  ){
-                            this.handlers.changed.apply(this, [result._id,changedFields,result]);
+                            this.handlers.changed.apply(this, [result._id,changedFields,result,assocModels[_id]]);
                         }
                     }
                 });
