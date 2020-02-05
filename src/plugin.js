@@ -45,7 +45,7 @@ EJSON.addType('ObjectID', function fromJSONValue(json) {
 
 export default function observeChangesPlugin(schema, options) {
     schema.pre('save',function(){
-        console.log(this);
+        //console.log(this);
         return Promise.resolve();
     });
     schema.post('save',async function(){
@@ -79,7 +79,7 @@ export default function observeChangesPlugin(schema, options) {
     });
 
     schema.post(/^update/, { query: true,document:true },async function(result) {
-        console.log({result});
+        //console.log({result});
         await waitReady();
         if(result.nModified>0) {
             new ObserveLogs({
@@ -93,7 +93,7 @@ export default function observeChangesPlugin(schema, options) {
     });
 
     schema.post(/^delete/, { query: true,document:true },async function(result) {
-        console.log({result});
+        //console.log({result});
         await waitReady();
         if(result.deletedCount>0) {
             new ObserveLogs({
