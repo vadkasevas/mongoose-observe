@@ -47,17 +47,8 @@ class ObserveCursor extends EventEmitter{
                 console.log('refresh query exec end');
                 if(err)
                     return callback();//TODO error handle
-                let assocModels = _.indexBy(results,'id');
-
                 /**@type object*/
-                let newAssoc = _.chain(results)
-                .indexBy('id')
-                .mapObject((doc,id)=>{
-                    let rawDoc =  doc.toObject({ getters: false });
-                    rawDoc._id = id;
-                    return rawDoc;
-                })
-                .value();
+                let newAssoc = _.indexBy(results,'id');
 
                 if(this.handlers.removed) {
                     let removedIds = _.difference( _.keys(this.modelsMap), _.keys(newAssoc) );
@@ -68,17 +59,19 @@ class ObserveCursor extends EventEmitter{
 
                 _.chain(newAssoc)
                 .each((result)=>{
-                    let rawResult =  newAssoc[String(result._id)];
-                    let _id = _.isString(result._id)?result._id:String(result._id);
-                    newAssoc[_id] = rawResult;
-                    let oldModel = this.modelsMap[_id];
+                    let model =  newAssoc[result.id];
+                    let oldModel = this.modelsMap[result.id];
                     if(!oldModel&&this.handlers.added){
-                        this.handlers.added.apply(this, [result._id,result,assocModels[_id]]);
+                        this.handlers.added.apply(this, [result._id,model]);
                     }
-                    if( oldModel && this.handlers.changed && !EJSON.equals(oldModel, rawResult)){
-                        let changedFields = DiffSequence.makeChangedFields(rawResult, oldModel);
-                        if( !_.isEmpty(changedFields)  ){
-                            this.handlers.changed.apply(this, [result._id,changedFields,result,assocModels[_id]]);
+                    if(oldModel) {
+                        let oldRaw = oldModel.toObject({ getters: false });
+                        let newRaw = model.toObject({ getters: false });
+                        if ( this.handlers.changed && !EJSON.equals (oldRaw, newRaw)) {
+                            let changedFields = DiffSequence.makeChangedFields (newRaw, oldRaw);
+                            if (!_.isEmpty (changedFields)) {
+                                this.handlers.changed.apply (this, [result.id, changedFields, result, model]);
+                            }
                         }
                     }
                 });
