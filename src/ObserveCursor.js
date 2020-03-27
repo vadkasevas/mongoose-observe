@@ -14,7 +14,8 @@ function delayedPromise(timeout){
     });
 }
 
-class ObserveCursor extends EventEmitter{
+
+export default class ObserveCursor extends EventEmitter{
     constructor(query,options={}){
         super();
         this.setMaxListeners(0);
@@ -38,7 +39,6 @@ class ObserveCursor extends EventEmitter{
                     },delay);
                 });
             }
-
             this.queryStarted = true;
             let started = Date.now();
             this.query.exec((err,results)=>{
@@ -54,6 +54,7 @@ class ObserveCursor extends EventEmitter{
                     let removedIds = _.difference( _.keys(this.modelsMap), _.keys(newAssoc) );
                     _.each(removedIds,(_id)=>{
                         this.handlers.removed.apply(this, [_id,this.modelsMap[_id]]);
+                        this.emit('removed',_id,this.modelsMap[_id]);
                     });
                 }
 
@@ -62,7 +63,8 @@ class ObserveCursor extends EventEmitter{
                     let model =  newAssoc[result.id];
                     let oldModel = this.modelsMap[result.id];
                     if(!oldModel&&this.handlers.added){
-                        this.handlers.added.apply(this, [result._id,model]);
+                        this.handlers.added.apply(this, [result.id,model]);
+                        this.emit('added',result.id,model);
                     }
                     if(oldModel) {
                         let oldRaw = oldModel.toObject({ getters: false });
@@ -71,6 +73,7 @@ class ObserveCursor extends EventEmitter{
                             let changedFields = DiffSequence.makeChangedFields (newRaw, oldRaw);
                             if (!_.isEmpty (changedFields)) {
                                 this.handlers.changed.apply (this, [result.id, changedFields, result, model]);
+                                this.emit('changed',result.id, changedFields, result, model);
                             }
                         }
                     }
@@ -80,12 +83,10 @@ class ObserveCursor extends EventEmitter{
                 this.emit('refresh',Date.now()-started);
                 callback();
             });
-
-
-        },1 );
-
-        this.pollingIntervalMs = options.pollingIntervalMs || 60000;
-        this.pollingThrottleMs = options.pollingThrottleMs || 1000;
+        }, 1 );
+        this.options = options;
+        this.pollingIntervalMs = _.isNumber(options.pollingIntervalMs)? options.pollingIntervalMs : 60000;
+        this.pollingThrottleMs = _.isNumber(options.pollingThrottleMs)? options.pollingThrottleMs : 1000;
     }
 
     scheduleRefresh(task){
@@ -116,6 +117,11 @@ class ObserveCursor extends EventEmitter{
         });
     }
 
+    /**@param {object} handlers
+     * @param {function(id:String, doc:mongoose.Document)} handlers.added
+     * @param {function(id:string, changedFields:object,newDoc:mongoose.Document,oldDoc: mongoose.Document)} handlers.changed
+     * @param {function(id:String, removedDoc:mongoose.Document)} handlers.removed
+     * */
     observeChanges(handlers){
         this.handlers = handlers;
         const rawConditions = EJSON.clone(this.query._conditions);
@@ -205,5 +211,3 @@ class ObserveCursor extends EventEmitter{
     }
 
 }
-
-export default ObserveCursor;

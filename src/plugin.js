@@ -29,6 +29,9 @@ async function waitReady(){
 const BsonObjectId = bson.ObjectID;
 const MongodbObjectId = mongodb.ObjectId;
 
+/**
+ * @returns {ObserveCursor}
+ * */
 Query.prototype.observeChanges = function(handlers,options){
     return new ObserveCursor(this,options).observeChanges(handlers);
 };
@@ -43,18 +46,27 @@ EJSON.addType('ObjectID', function fromJSONValue(json) {
     return json;
 });
 
+function collectionName(ctx){
+    let result = null;
+    if(ctx instanceof mongoose.Model){
+        result = ctx.collection.name;
+    }else if(ctx instanceof mongoose.Query){
+        result = ctx.mongooseCollection.name;
+    }
+    return result;
+}
 export default function observeChangesPlugin(schema, options) {
-    schema.pre('save',function(){
+    /*schema.pre('save',function(){
         //console.log(this);
         return Promise.resolve();
-    });
+    });*/
     schema.post('save',async function(){
         await waitReady();
-        let rawDoc = this.toObject({ getters: false });
+        let rawDoc = this.toObject({ getters: true });
         rawDoc = EJSON.clone(rawDoc);
         new ObserveLogs({
             type:'save',
-            collectionName:this.collection.name,
+            collectionName:collectionName(this),
             arguments:[rawDoc],
             state:{
                 isNew:this.isNew
@@ -63,43 +75,63 @@ export default function observeChangesPlugin(schema, options) {
         }).save();
     });
 
-    schema.post('remove', { query: true,document:true  },async function(result) {
+    schema.post(/^remove|Remove/, { query: true,document:true  },async function(result) {
         await waitReady();
         //let rawDoc = this.toObject({ getters: false });
         //rawDoc = EJSON.clone(rawDoc);
-        //if(result.deletedCount>0) {
+        let condition = null;
+        if(result instanceof mongoose.Model){
+            condition =EJSON.clone({_id:result._id});
+        }else if(this instanceof mongoose.Query && result.deletedCount>0){
+            condition = EJSON.clone(this._conditions);
+        }
+
+        if(condition) {
             new ObserveLogs({
                 type: 'remove',
-                collectionName: this.mongooseCollection.name,
-                arguments: [EJSON.clone(this._conditions)],
-                state: {},
-                date: new Date()
-            }).save();
-        //}
-    });
-
-    schema.post(/^update/, { query: true,document:true },async function(result) {
-        //console.log({result});
-        await waitReady();
-        if(result.nModified>0) {
-            new ObserveLogs({
-                type: 'update',
-                collectionName: this.mongooseCollection.name,
-                arguments: [EJSON.clone(this._conditions)],
+                collectionName:collectionName(this),
+                arguments: [condition],
                 state: {},
                 date: new Date()
             }).save();
         }
     });
 
-    schema.post(/^delete/, { query: true,document:true },async function(result) {
+    schema.post(/^update|Update/, { query: true,document:true },async function(result) {
         //console.log({result});
         await waitReady();
-        if(result.deletedCount>0) {
+        let condition = null;
+        if(result instanceof mongoose.Model){
+            condition = EJSON.clone({_id:result._id});
+        }else if(this instanceof mongoose.Query && result.nModified>0){
+            condition = EJSON.clone(this._conditions);
+        }
+        if(condition) {
+            new ObserveLogs({
+                type: 'update',
+                collectionName:collectionName(this),
+                arguments: [condition],
+                state: {},
+                date: new Date()
+            }).save();
+        }
+    });
+
+    schema.post(/^delete|Delete/, { query: true,document:true },async function(result) {
+        //console.log({result});
+        await waitReady();
+        let condition = null;
+        if(result instanceof mongoose.Model){
+            condition = EJSON.clone({_id:result._id});
+        }else if(this instanceof mongoose.Query && result.deletedCount>0){
+            condition = EJSON.clone(this._conditions);
+        }
+
+        if(condition) {
             new ObserveLogs({
                 type: 'remove',
-                collectionName: this.mongooseCollection.name,
-                arguments: [EJSON.clone(this._conditions)],
+                collectionName:collectionName(this),
+                arguments: [condition],
                 state: {},
                 date: new Date()
             }).save();

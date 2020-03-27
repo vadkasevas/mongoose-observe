@@ -1,4 +1,0 @@
-"use strict";var _interopRequireDefault3 = require("@babel/runtime/helpers/interopRequireDefault");var _interopRequireDefault2 = _interopRequireDefault3(require("@babel/runtime/helpers/interopRequireDefault"));Object.defineProperty(exports, "__esModule", { value: true });var _plugin = require("./plugin");var observeChangesPlugin = (0, _interopRequireDefault2["default"])(_plugin)["default"];exports["default"] =
-
-observeChangesPlugin;
-//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJzb3VyY2VzIjpbIi4uL3NyYy9pbmRleC5qcyJdLCJuYW1lcyI6WyJvYnNlcnZlQ2hhbmdlc1BsdWdpbiJdLCJtYXBwaW5ncyI6ImdSQUFBLGtDLElBQU9BLG9COztBQUVRQSxvQiIsInNvdXJjZXNDb250ZW50IjpbImltcG9ydCBvYnNlcnZlQ2hhbmdlc1BsdWdpbiBmcm9tICcuL3BsdWdpbic7XG5cbmV4cG9ydCBkZWZhdWx0IG9ic2VydmVDaGFuZ2VzUGx1Z2luOyJdfQ==
