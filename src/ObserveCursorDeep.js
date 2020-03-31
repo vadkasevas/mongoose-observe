@@ -43,25 +43,34 @@ export default class ObserveCursorDeep extends EventEmitter {
     observeChanges (handlers) {
         let handlersWrapper = {};
         const self = this;
+        let counters = {
+            added:0,
+            changed:0,
+            removed:0
+        }
         if (handlers.added) {
             // eslint-disable-next-line no-unused-vars
             handlersWrapper.added = function (id, doc) {
+                counters.added++;
                 handlers.added.apply (self, arguments);
             }
         }
         if (handlers.changed) {
             // eslint-disable-next-line no-unused-vars
             handlersWrapper.changed = function (id, changedFields, newDoc, oldDoc) {
+                counters.changed++;
                 handlers.changed.apply (self, arguments);
             }
         }
         if (handlers.removed) {
             // eslint-disable-next-line no-unused-vars
             handlersWrapper.removed = function (id, removedDoc) {
+                counters.removed++;
                 handlers.removed.apply (self, arguments);
             }
         }
 
+        let wasRefreshed = false;
         this.rootObserver.on ('refresh', async (delay) => {
             let started = Date.now ();
             let populatedPaths = this.rootQuery.getPopulatedPaths ();
@@ -72,20 +81,16 @@ export default class ObserveCursorDeep extends EventEmitter {
             })
             .value ();
 
-            if (!_.isEmpty (models) && !_.isEmpty (populatedPaths)) {
+            if (
+                !_.isEmpty (models) && !_.isEmpty (populatedPaths)
+                &&(!wasRefreshed||counters.added>0||counters.changed>0||counters.removed>0)
+            ) {
+                counters.added=0;
+                counters.changed=0;
+                counters.removed=0;
                 this.rootObserver.pause ();
                 /**@type Array<QueryItem>*/
                 let newQueries = await modelPopulate.apply (this.rootQuery.model, [models, populatedPaths]);
-                let model = _.first (models);
-                if (model) {
-                    model = model.toObject ();
-                }
-                /*if (!_.isEmpty (newQueries)) {
-                    console.log ({
-                        newQueries,
-                        model: model
-                    })
-                }*/
                 const queryItemChanged = (oldItem, newItem) => {
                     if (oldItem)
                         oldItem.observer.stop ();
@@ -181,6 +186,7 @@ export default class ObserveCursorDeep extends EventEmitter {
 
             }
             let spended = Date.now () - started;
+            wasRefreshed = true;
             this.emit ('refresh', delay + spended);
         });
         this.rootObserver.observeChanges (handlersWrapper);

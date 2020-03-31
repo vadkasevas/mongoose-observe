@@ -124,8 +124,8 @@ describe('Observe',()=>{
             pollingIntervalMs:10000,
             pollingThrottleMs:10
         });
-        deepObserver.on('refresh',()=>{
-            //console.log('deepObserver refresh')
+        deepObserver.on('changed',()=>{
+            console.log('deepObserver changed')
         });
         let stubObserver = new StubObserver( deepObserver );
         let mainModel = await new MainModels({
@@ -155,6 +155,10 @@ describe('Observe',()=>{
         roleModel.name = 'testRole2';
         await roleModel.save();
         let changedArgs = await stubObserver.waitEvent('changed',1005);
+        setTimeout(()=>{
+            deepObserver.rootObserver.emit('refresh',0);
+        },1);
+        stubObserver.waitEvent('changed',6).should.be.rejected();
         console.log({changedArgs});
     });
 
