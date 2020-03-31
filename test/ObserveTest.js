@@ -6,6 +6,8 @@ import StubObserver from "./models/stubs/StubObserver";
 import Roles from "./models/Roles";
 import Tags from "./models/Tags";
 import {_populate,modelPopulate} from '../test';
+import populateProxy from '../src/PopulateProxy';
+
 function sleep(ms){
     return new Promise(resolve =>{
         setTimeout(resolve,ms);
@@ -107,21 +109,8 @@ describe('Observe',()=>{
     });
 
     it('observe relations', async function(){
-        let mainModel = await new MainModels({
-            name:'relations'
-        }).save();
-        let roleModel = await new Roles({
-            name:'testRole'
-        }).save();
-        let tagsModel = await new Tags({
-            name:'testTag'
-        }).save();
-        mainModel.tag_ids = [tagsModel._id];
-        mainModel.role_id = roleModel._id;
-        await mainModel.save();
         let models = {};
-        let mainObserver = MainModels.find().populate('tags').populate('role')
-        .observeChanges({
+        let deepObserver = MainModels.find().populate(['tags','role']).observeDeepChanges({
             added(id,doc){
                 models[id] = doc;
             },
@@ -133,17 +122,17 @@ describe('Observe',()=>{
             }
         },{
             pollingIntervalMs:10000,
-            pollingThrottleMs:1
+            pollingThrottleMs:10
         });
-        let mainStubObserver = new StubObserver( mainObserver );
-        await mainStubObserver.waitEvent('added',1000);
-    });
-
-    it('populate',async function(){
-        const query = MainModels.find().populate(['tags','role']);
+        deepObserver.on('refresh',()=>{
+            //console.log('deepObserver refresh')
+        });
+        let stubObserver = new StubObserver( deepObserver );
         let mainModel = await new MainModels({
             name:'relations'
         }).save();
+        //await stubObserver.waitEvent('added',1001);
+        await stubObserver.waitRefresh(1001);
         let roleModel = await new Roles({
             name:'testRole'
         }).save();
@@ -152,12 +141,21 @@ describe('Observe',()=>{
         }).save();
         mainModel.tag_ids = [tagsModel._id];
         mainModel.role_id = roleModel._id;
-        await mainModel.save();
-        let docs = [mainModel];
-        let populated = await modelPopulate.apply(MainModels,[docs,['tags','role']]);
 
-        console.log({populatedPaths:query.getPopulatedPaths()});
-        console.log({query});
+        await mainModel.save();
+        await stubObserver.waitRefresh(1002);
+        tagsModel.name = 'testTag2';
+        await tagsModel.save();
+        await stubObserver.waitEvent('changed',1003);
+
+        tagsModel.name = 'testTag3';
+        await tagsModel.save();
+        await stubObserver.waitEvent('changed',1004);
+
+        roleModel.name = 'testRole2';
+        await roleModel.save();
+        let changedArgs = await stubObserver.waitEvent('changed',1005);
+        console.log({changedArgs});
     });
 
 });

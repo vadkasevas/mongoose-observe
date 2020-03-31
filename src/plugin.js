@@ -4,6 +4,7 @@ import {Query} from 'mongoose';
 import EJSON from 'ejson';
 const mongoose = require('mongoose');
 import emitter from "./emitter";
+import ObserveCursorDeep from "./ObserveCursorDeep";
 
 const moduleMongoose = require.cache[require.resolve('mongoose')]
 
@@ -34,6 +35,13 @@ const MongodbObjectId = mongodb.ObjectId;
  * */
 Query.prototype.observeChanges = function(handlers,options){
     return new ObserveCursor(this,options).observeChanges(handlers);
+};
+
+/**
+ * @returns {ObserveCursor}
+ * */
+Query.prototype.observeDeepChanges = function(handlers,options){
+    return new ObserveCursorDeep(this,options).observeChanges(handlers);
 };
 
 mongoose.ObjectId.prototype.toJSONValue = BsonObjectId.prototype.toJSONValue = MongodbObjectId.prototype.toJSONValue = function(){

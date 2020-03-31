@@ -22,6 +22,14 @@ export {
     _execPopulateQuery,
     modelPopulate
 }
+/**
+ * @name QueryItem
+ * @extends Object
+ * @property {model.Query} query
+ * @property {Array<Document>} results
+ * @method assign(vals:Array<Document>)
+ * */
+
 /*!
  * Populate helper
  *
@@ -50,7 +58,7 @@ function modelPopulate(docs, paths, callback) {
         cb = this.$wrapCallback(cb);
         _populate(_this, docs, paths, cache, cb);
     }, this.events);
-};
+}
 
 function _populate(model, docs, paths, cache, callback) {
     const length = paths.length;
@@ -65,9 +73,9 @@ function _populate(model, docs, paths, cache, callback) {
             if (err) {
                 return callback(err, null);
             }
-            _.each(newQueries,(newQuery)=>{
+            _.each(newQueries,(queryItem)=>{
                 queries[path.path] = queries[path.path] || [];
-                queries[path.path].push(newQuery);
+                queries[path.path].push(queryItem);
             });
             if (--pending) {
                 return;
@@ -75,12 +83,6 @@ function _populate(model, docs, paths, cache, callback) {
             callback(null, queries);
         });
     });
-    // each path has its own query options and must be executed separately
-    /*
-    for (let i = 0; i < length; ++i) {
-        populate(model, docs, paths[i], next);
-    }*/
-
 }
 
 /*!
@@ -109,6 +111,7 @@ function populate(model, docs, options, callback) {
     }
 
     const len = modelsMap.length;
+    let vals = [];
     let queries = [];
 
     function flatten(item) {
@@ -197,12 +200,24 @@ function populate(model, docs, options, callback) {
         _execPopulateQuery.apply(null, arr);
     }
 
-    function _next(err, query) {
+    /**@param {Error} err
+     * @param {QueryItem} queryItem
+     **/
+    function _next(err, queryItem) {
         if (err != null) {
             return callback(err, null);
         }
-        if(query)
-        queries.push(query);
+        if(queryItem) {
+            queries.push (queryItem);
+            queryItem.assign = function(newVals=vals){
+                for (const arr of params) {
+                    const mod = arr[0];
+                    const assignmentOpts = arr[3];
+                    _assign(model, newVals, mod, assignmentOpts);
+                }
+            }
+        }
+        vals = vals.concat(queryItem.results);
         if (--_remaining === 0) {
             _done();
         }
@@ -266,8 +281,21 @@ function _execPopulateQuery(mod, match, select, assignmentOpts, callback) {
     if (subPopulate) {
         query.populate(subPopulate);
     }
-    callback(null,query);
-    //query.exec(callback);
+    //callback(null,query);
+
+    query.exec((err,qResults)=>{
+        if(err)
+            return callback(err);
+        return callback(null,{
+            mod,
+            assignmentOpts,
+            query:query,
+            results:qResults,
+            assign(vals){
+                return _assign(mod.model, vals, mod, assignmentOpts);
+            }
+        });
+    });
 }
 
 /*!

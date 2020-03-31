@@ -25,6 +25,8 @@ export default class ObserveCursor extends EventEmitter{
         this.lastRefreshed = 0;
         this.stopped = false;
         this.wasRefreshed = false;
+        this.paused = false;
+
         this.once('refresh',()=>{
             this.wasRefreshed = true;
         });
@@ -39,12 +41,20 @@ export default class ObserveCursor extends EventEmitter{
                     },delay);
                 });
             }
+            if(this.paused){
+                await new Promise((resolve)=>{
+                    this.once('awake',resolve);
+                });
+            }
+            if(this.stopped){
+                return callback(new Error('Stopped'));
+            }
             this.queryStarted = true;
             let started = Date.now();
             this.query.exec((err,results)=>{
                 this.queryStarted = false;
                 this.lastRefreshed = Date.now();
-                console.log('refresh query exec end');
+                //console.log('refresh query exec end');
                 if(err)
                     return callback();//TODO error handle
                 /**@type object*/
@@ -57,7 +67,6 @@ export default class ObserveCursor extends EventEmitter{
                         this.emit('removed',_id,this.modelsMap[_id]);
                     });
                 }
-
                 _.chain(newAssoc)
                 .each((result)=>{
                     let model =  newAssoc[result.id];
@@ -66,14 +75,14 @@ export default class ObserveCursor extends EventEmitter{
                         this.handlers.added.apply(this, [result.id,model]);
                         this.emit('added',result.id,model);
                     }
-                    if(oldModel) {
+                    if(oldModel&&this.handlers.changed) {
                         let oldRaw = oldModel.toObject({ getters: false });
                         let newRaw = model.toObject({ getters: false });
-                        if ( this.handlers.changed && !EJSON.equals (oldRaw, newRaw)) {
+                        if ( !EJSON.equals (oldRaw, newRaw)) {
                             let changedFields = DiffSequence.makeChangedFields (newRaw, oldRaw);
                             if (!_.isEmpty (changedFields)) {
-                                this.handlers.changed.apply (this, [result.id, changedFields, result, model]);
-                                this.emit('changed',result.id, changedFields, result, model);
+                                this.handlers.changed.apply (this, [result.id, changedFields, result, oldModel]);
+                                this.emit('changed',result.id, changedFields, result, oldModel);
                             }
                         }
                     }
@@ -155,7 +164,9 @@ export default class ObserveCursor extends EventEmitter{
             }
         };
         emitter.on(this.query.mongooseCollection.name,listener);
-
+        this.once('stop',()=>{
+            emitter.removeListener(this.query.mongooseCollection.name,listener)
+        });
         this.scheduleRefresh();
         this.doPolling();
         return this;
@@ -192,10 +203,24 @@ export default class ObserveCursor extends EventEmitter{
         });
     }
 
-    models(){
+    currentModels(raw=false){
+        return _.chain(this.modelsMap)
+        .values()
+        .map((model)=>{
+            if(raw){
+                return model.toObject({ getters: false });
+            }
+            return model;
+        })
+        .value()
+    }
+
+    models(raw=false){
         return new Promise((resolve)=>{
             let onReady = ()=>{
-                resolve(_.values(this.modelsMap));
+                resolve(
+                    this.currentModels(raw)
+                );
             }
             if(this.wasRefreshed)
                 return onReady();
@@ -208,6 +233,18 @@ export default class ObserveCursor extends EventEmitter{
     stop(){
         this.stopped = true;
         this.emit('stop');
+    }
+
+    pause(){
+        this.paused = true;
+        this.emit('paused');
+    }
+
+    awake(){
+        if(this.paused){
+            this.paused=false;
+            this.emit('awake');
+        }
     }
 
 }
