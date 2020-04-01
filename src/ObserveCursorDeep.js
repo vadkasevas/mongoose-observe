@@ -51,6 +51,7 @@ export default class ObserveCursorDeep extends EventEmitter {
             handlersWrapper.added = function (id, doc) {
                 counters.added++;
                 handlers.added.apply (self, arguments);
+                self.emit('added',id,doc);
             }
         }
         if (handlers.changed) {
@@ -58,6 +59,7 @@ export default class ObserveCursorDeep extends EventEmitter {
             handlersWrapper.changed = function (id, changedFields, newDoc, oldDoc) {
                 counters.changed++;
                 handlers.changed.apply (self, arguments);
+                self.emit('changed',id, changedFields, newDoc, oldDoc);
             }
         }
         if (handlers.removed) {
@@ -65,6 +67,7 @@ export default class ObserveCursorDeep extends EventEmitter {
             handlersWrapper.removed = function (id, removedDoc) {
                 counters.removed++;
                 handlers.removed.apply (self, arguments);
+                self.emit('removed',id, removedDoc);
             }
         }
 
