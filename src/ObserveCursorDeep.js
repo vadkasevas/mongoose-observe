@@ -1,9 +1,7 @@
 import ObserveCursor from "./ObserveCursor";
 import EventEmitter from 'events';
-import {modelPopulate} from './../test';
+import {modelPopulate} from '../src/mongooseUtils';
 import _ from 'underscore';
-import MainModels from "../test/models/MainModel";
-import {_populate} from '../test';
 import populateProxy from '../src/PopulateProxy';
 
 function queryEquals (query1, query2) {
@@ -82,6 +80,7 @@ export default class ObserveCursorDeep extends EventEmitter {
             .value ();
 
             if (
+                handlers.changed &&
                 !_.isEmpty (models) && !_.isEmpty (populatedPaths)
                 &&(!wasRefreshed||counters.added>0||counters.changed>0||counters.removed>0)
             ) {

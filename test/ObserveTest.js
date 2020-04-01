@@ -1,18 +1,10 @@
-import should from 'should';
+import 'should';
 import {describe,before,beforeEach,it} from 'mocha';
 import mongoose from 'mongoose';
 import MainModels from "./models/MainModel";
 import StubObserver from "./models/stubs/StubObserver";
 import Roles from "./models/Roles";
 import Tags from "./models/Tags";
-import {_populate,modelPopulate} from '../test';
-import populateProxy from '../src/PopulateProxy';
-
-function sleep(ms){
-    return new Promise(resolve =>{
-        setTimeout(resolve,ms);
-    });
-}
 
 
 describe('Observe',()=>{
