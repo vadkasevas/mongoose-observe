@@ -1,8 +1,8 @@
 import ObserveCursor from "./ObserveCursor";
 import EventEmitter from 'events';
-import {modelPopulate} from '../src/mongooseUtils';
+import {modelPopulate} from './mongooseUtils';
 import _ from 'underscore';
-import populateProxy from '../src/PopulateProxy';
+import populateProxy from './PopulateProxy';
 
 function queryEquals (query1, query2) {
     if (!query1 && !query2)
