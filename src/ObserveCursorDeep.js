@@ -213,5 +213,14 @@ export default class ObserveCursorDeep extends EventEmitter {
 
     stop () {
         this.rootObserver.stop ();
+        let oldPopPaths = _.keys (this.popData);
+        _.each (oldPopPaths, async (popName) => {
+            let oldItems = this.popData[popName];
+            _.each (oldItems, (oldItem) => {
+                oldItem.observer.stop ();
+            });
+        });
+        this.popData = {};
     }
+
 }
