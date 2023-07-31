@@ -1,4 +1,4 @@
-import path from 'path';
+const path = require( 'path' );
 var mongooseDir = path.resolve(require.resolve('mongoose'),'..');
 const MongooseError = require('mongoose/lib/error/index');
 const getModelsMapForPopulate = require(`${mongooseDir}/lib/helpers/populate/getModelsMapForPopulate`);
